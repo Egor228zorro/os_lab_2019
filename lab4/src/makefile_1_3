@@ -1,0 +1,28 @@
+CC=gcc
+CFLAGS=-I.
+
+new : parallel_min_max process_memory zombie
+	@echo "Запуск parallel_min_max с параметрами: $(ARGS)"
+	@./parallel_min_max $(ARGS)
+	@echo "Запуск process_memory..."
+	@./process_memory
+	@echo "Запуск zombie..."
+	@./zombie
+
+parallel_min_max : parallel_min_max.c utils.o find_min_max.o utils.h find_min_max.h
+	$(CC) -o parallel_min_max utils.o find_min_max.o parallel_min_max.c $(CFLAGS)
+
+zombie : zombie.c
+	$(CC) -o zombie zombie.c $(CFLAGS)
+
+process_memory : process_memory.c
+	$(CC) -o process_memory process_memory.c $(CFLAGS)
+
+utils.o : utils.c utils.h
+	$(CC) -o utils.o -c utils.c $(CFLAGS)
+
+find_min_max.o : find_min_max.c utils.h find_min_max.h
+	$(CC) -o find_min_max.o -c find_min_max.c $(CFLAGS)
+
+clean :
+	rm -f utils.o find_min_max.o parallel_min_max zombie process_memory
