@@ -11,12 +11,19 @@
 #define BUFSIZE 100
 #define SADDR struct sockaddr
 
-int main() {
+int main(int argc, char *argv[]) {
+  if (argc < 3) {
+    printf("Usage: %s <port> <buffer_size>\n", argv[0]);
+    exit(1);
+  }
+
   const size_t kSize = sizeof(struct sockaddr_in);
 
   int lfd, cfd;
   int nread;
-  char buf[BUFSIZE];
+  //char buf[BUFSIZE];
+  int buffer_size = atoi(argv[2]);
+  char buf[buffer_size];
   struct sockaddr_in servaddr;
   struct sockaddr_in cliaddr;
 
@@ -28,7 +35,7 @@ int main() {
   memset(&servaddr, 0, kSize);
   servaddr.sin_family = AF_INET;
   servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  servaddr.sin_port = htons(SERV_PORT);
+  servaddr.sin_port = htons(atoi(argv[1]));
 
   if (bind(lfd, (SADDR *)&servaddr, kSize) < 0) {
     perror("bind");
@@ -49,7 +56,7 @@ int main() {
     }
     printf("connection established\n");
 
-    while ((nread = read(cfd, buf, BUFSIZE)) > 0) {
+    while ((nread = read(cfd, buf, buffer_size)) > 0) {
       write(1, &buf, nread);
     }
 
@@ -60,3 +67,4 @@ int main() {
     close(cfd);
   }
 }
+

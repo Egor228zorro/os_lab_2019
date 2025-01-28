@@ -13,9 +13,16 @@
 #define SADDR struct sockaddr
 #define SLEN sizeof(struct sockaddr_in)
 
-int main() {
+int main(int argc, char *argv[]) {
+  if (argc < 3) {
+    printf("Usage: %s <port> <buffer_size>\n", argv[0]);
+    exit(1);
+  }
+
   int sockfd, n;
-  char mesg[BUFSIZE], ipadr[16];
+  //char mesg[BUFSIZE], ipadr[16];
+  int buffer_size = atoi(argv[2]);
+  char mesg[buffer_size], ipadr[16];
   struct sockaddr_in servaddr;
   struct sockaddr_in cliaddr;
 
@@ -27,7 +34,7 @@ int main() {
   memset(&servaddr, 0, SLEN);
   servaddr.sin_family = AF_INET;
   servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  servaddr.sin_port = htons(SERV_PORT);
+  servaddr.sin_port = htons(atoi(argv[1]));
 
   if (bind(sockfd, (SADDR *)&servaddr, SLEN) < 0) {
     perror("bind problem");
@@ -38,7 +45,7 @@ int main() {
   while (1) {
     unsigned int len = SLEN;
 
-    if ((n = recvfrom(sockfd, mesg, BUFSIZE, 0, (SADDR *)&cliaddr, &len)) < 0) {
+    if ((n = recvfrom(sockfd, mesg, buffer_size, 0, (SADDR *)&cliaddr, &len)) < 0) {
       perror("recvfrom");
       exit(1);
     }
@@ -54,3 +61,4 @@ int main() {
     }
   }
 }
+
