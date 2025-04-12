@@ -16,6 +16,18 @@
 #include "find_min_max.h"
 #include "utils.h"
 
+pid_t child_pids[100];
+int pnum_global;
+
+void timeout_handler(int sig) {
+    printf("Истек тайм-аут. Завершение дочерних процессов.\n");
+    for (int i = 0; i < pnum_global; i++) {
+        if (child_pids[i] > 0) { 
+            kill(child_pids[i], SIGKILL); 
+        }
+    }
+}
+
 int main(int argc, char **argv) {
     int seed = -1;         // Нач значение для генератора случайных чисел (инициализируется -1 для проверки)
     int array_size = -1;   // Размер массива (инициализируется -1 для проверки)
@@ -112,8 +124,8 @@ int main(int argc, char **argv) {
             return 1;              
         }
     }
-
-    pid_t child_pids[pnum]; // Массив для хранения PID дочерних процессов
+	
+	pnum_global = pnum;
 
     // Создание дочерних процессов
     for (int i = 0; i < pnum; i++) {
@@ -144,6 +156,7 @@ int main(int argc, char **argv) {
                 }
 
                 close(pipes[i][1]); // Закрыть запись (больше не используется)
+                sleep(timeout); // <--- ДОБАВЛЕННЫЙ ВЫЗОВ sleep ДЛЯ ИМИТАЦИИ ЗАДЕРЖКИ
                 free(array);         // Освобождение выделенной памяти
                 exit(0);             // Завершение дочернего процесса
             }
@@ -154,27 +167,25 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Установка таймаута, если он задан
     if (timeout > 0) {
-        sleep(timeout); // Ожидание заданного времени
-        printf("Истек тайм-аут. Завершение дочерних процессов.\n"); // Вывод сообщения о таймауте
-        for (int i = 0; i < pnum; i++) {                                  // Перебор всех дочерних процессов
-            if (child_pids[i] > 0) {                                     // Проверка, что PID процесса больше 0 (существует)
-                kill(child_pids[i], SIGKILL);                         // Отправка сигнала SIGKILL для завершения процесса
-            }
-        }
+        signal(SIGALRM, timeout_handler);
+        alarm(timeout); 
     }
 
-    // Ожидание завершения всех дочерних процессов
-    int finished_processes = 0; // Счетчик завершенных процессов
-    while (finished_processes < pnum) { // Ожидание, пока не завершатся все процессы
-        int status;                    // Статус завершения процесса
-        pid_t pid = wait(&status);      // Ожидание завершения любого дочернего процесса
-        if (pid > 0) {                  // Проверка, успешно ли завершился процесс
-            active_child_processes -= 1; // Уменьшение счетчика активных процессов
-            finished_processes++;        // Увеличение счетчика завершенных процессов
-        } else {
-            perror("wait"); // Сообщаем об ошибке, но не прерываем цикл.
+    int finished_processes = 0;
+    while (finished_processes < pnum) {
+        for (int i = 0; i < pnum; i++) {
+            if (child_pids[i] <= 0) continue; 
+
+            int status;
+            pid_t result = waitpid(child_pids[i], &status, WNOHANG); 
+            if (result > 0) { 
+                active_child_processes -= 1;
+                finished_processes++;
+                child_pids[i] = 0; 
+            } else if (result < 0) {
+                perror("waitpid");
+            }
         }
     }
 
@@ -228,6 +239,7 @@ int main(int argc, char **argv) {
     printf("Затраченное время: %fms\n", elapsed_time); // Вывод затраченного времени
     return 0;                                                           
 }
+
 
 
 
